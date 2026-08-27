@@ -1,0 +1,19 @@
+# Build artifacts
+build/
+bin/
+*.o
+*.obj
+*.so
+*.dylib
+*.a
+
+# Output renders
+output/
+*.ppm
+
+# System and IDE files
+.DS_Store
+.vscode/
+.idea/
+*.swp
+*~

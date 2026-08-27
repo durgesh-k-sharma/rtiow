@@ -1,0 +1,34 @@
+name: CI
+
+on:
+  push:
+    branches: [ "**" ]
+  pull_request:
+    branches: [ "**" ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up CMake and Compilers
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y cmake build-essential g++
+
+    - name: Configure CMake
+      run: cmake -B build -DCMAKE_BUILD_TYPE=Release
+
+    - name: Build All Targets
+      run: cmake --build build --config Release
+
+    - name: Run Unit Tests
+      run: ctest --test-dir build --output-on-failure
+
+    - name: Run Smoke Test & Pixel Diff Verification
+      run: |
+        mkdir -p output
+        ./build/raytracer --scene final --width 100 --samples 10 --depth 10 --threads 1 --png output/smoke_test.png
+        ./build/pixel_diff output/smoke_test.png golden_images/ci_smoke_test.png --tolerance 5 --mean-tol 1.0

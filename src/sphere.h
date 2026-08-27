@@ -1,0 +1,61 @@
+#ifndef SPHERE_H
+#define SPHERE_H
+
+#include "hittable.h"
+
+class sphere : public hittable {
+public:
+    sphere(const point3& static_center, double radius, shared_ptr<material> mat)
+      : center(static_center), radius(std::fmax(0, radius)), mat(mat), is_hollow(false) {
+        auto rvec = vec3(radius, radius, radius);
+        bbox = aabb(center - rvec, center + rvec);
+    }
+
+    // Support negative radius for hollow glass spheres
+    sphere(const point3& static_center, double radius, shared_ptr<material> mat, bool allow_negative)
+      : center(static_center), radius(allow_negative ? radius : std::fmax(0, radius)), mat(mat), is_hollow(allow_negative && radius < 0) {
+        auto r = std::fabs(radius);
+        auto rvec = vec3(r, r, r);
+        bbox = aabb(center - rvec, center + rvec);
+    }
+
+    bool hit(const ray& r, interval ray_t, hit_record& rec) const override {
+        vec3 oc = center - r.origin();
+        auto a = r.direction().length_squared();
+        auto h = dot(r.direction(), oc);
+        auto c = oc.length_squared() - radius * radius;
+
+        auto discriminant = h * h - a * c;
+        if (discriminant < 0)
+            return false;
+
+        auto sqrtd = std::sqrt(discriminant);
+
+        // Find the nearest root that lies in the acceptable range.
+        auto root = (h - sqrtd) / a;
+        if (!ray_t.surrounds(root)) {
+            root = (h + sqrtd) / a;
+            if (!ray_t.surrounds(root))
+                return false;
+        }
+
+        rec.t = root;
+        rec.p = r.at(rec.t);
+        vec3 outward_normal = (rec.p - center) / radius;
+        rec.set_face_normal(r, outward_normal);
+        rec.mat = mat;
+
+        return true;
+    }
+
+    aabb bounding_box() const override { return bbox; }
+
+private:
+    point3 center;
+    double radius;
+    shared_ptr<material> mat;
+    bool is_hollow;
+    aabb bbox;
+};
+
+#endif // SPHERE_H
